@@ -1,20 +1,23 @@
 services:
   wordpress:
     build:
-     context: ./wordpress_data
+      context: ./wordpress_data
     image: wordpress:latest
     user: root
     container_name: azntaiji-com-wordpress
     restart: always
+    external_links:
+      - mysql-db
     volumes:
       - ./wordpress_data:/var/www/html:rw
     networks:
       - reverse-proxynet
-      - phpmyadmin
-    env_file:
-      - env/wordpress.env
-    depends_on:
-      - redis
+    environment:
+      - WORDPRESS_DB_HOST=mysql-db
+      - WORDPRESS_DB_PORT_NUMBER=3306
+      - WORDPRESS_DB_NAME=wordpress
+      - WORDPRESS_DB_USER=root
+      - WORDPRESS_DB_PASSWORD=${DB_ROOT_PASSWORD}
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=reverse-proxynet"
@@ -23,18 +26,7 @@ services:
       - "traefik.http.routers.azntaiji-website.tls.certresolver=myresolver"
       #- "traefik.http.services.azntaiji-website.loadbalancer.server.port=8085"
       - "traefik.http.routers.azntaiji-website.middlewares=https_redirect@docker,non_www@docker"
-  redis:
-    image: redis:6
-    restart: always
-    ports:
-     - 6379:6379
-    networks:
-     - phpmyadmin
-    entrypoint: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
 networks:
   reverse-proxynet:
     name: reverse-proxynet
-    external: true
-  phpmyadmin:
-    name: phpmyadmin
     external: true
